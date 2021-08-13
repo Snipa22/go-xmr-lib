@@ -1,4 +1,4 @@
-package Base58
+package base58
 
 import (
 	"encoding/binary"

@@ -3,14 +3,14 @@ package support
 import (
 	"bytes"
 	"errors"
-	"github.com/Snipa22/go-xmr-lib/support/Base58"
+	"github.com/Snipa22/go-xmr-lib/support/base58"
 	"golang.org/x/crypto/sha3"
 )
 
 var ErrInvalidChecksum = errors.New("invalid checksum for address")
 
 func ValidateAddress(address string, tag []byte) (bool, error) {
-	addr, err := Base58.DecodeFromString(address)
+	addr, err := base58.DecodeFromString(address)
 	if err != nil {
 		return false, err
 	}
