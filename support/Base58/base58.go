@@ -3,6 +3,7 @@ package Base58
 import (
 	"encoding/binary"
 	"errors"
+	"lukechampine.com/uint128"
 	"strings"
 )
 
@@ -90,6 +91,12 @@ func encodeBlock(toEncode []byte) (string, error) {
 		retVal = string(alphabet[res%58]) + retVal
 		res /= 58
 	}
+	blockSize := encodedBlockSizes[len(toEncode)]
+	if len(retVal) < blockSize {
+		for len(retVal) < blockSize {
+			retVal = "1" + retVal
+		}
+	}
 	return retVal, nil
 }
 
@@ -113,7 +120,7 @@ func decodeBlock(toDecode string) ([]byte, error) {
 	if blockSize <= 0 {
 		return nil, ErrInvalidBlockSize
 	}
-	var resNum uint64 = 0
+	var resNum uint128.Uint128
 	var order uint64 = 1
 	for i := range toDecode {
 		i = len(toDecode) - 1 - i
@@ -121,16 +128,22 @@ func decodeBlock(toDecode string) ([]byte, error) {
 		if char == -1 {
 			return nil, ErrInvalidChar
 		}
-		product := order*uint64(char) + resNum
-		if product > 2^64 {
+		tempNum := uint128.Uint128{Lo: 1}
+		tempNum = tempNum.Mul64(order)
+		tempNum = tempNum.Mul64(uint64(char))
+		tempNum = tempNum.Add(resNum)
+		if tempNum.Hi != 0 {
 			return nil, ErrOverflow
 		}
-		resNum = product
+		resNum = tempNum
 		order *= 58
 	}
+	if blockSize < fullBlockSize && 1<<(8*uint64(blockSize)) <= resNum.Lo {
+		return nil, ErrOverflow
+	}
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, resNum)
-	return nil, nil
+	binary.BigEndian.PutUint64(b, resNum.Lo)
+	return b[8-blockSize:], nil
 }
 
 /*
@@ -147,7 +160,7 @@ func EncodeToString(src []byte) (string, error) {
 	lastBlockSize := lenData % fullBlockSize
 	retVal := ""
 	for i := 0; i < fullBlockCount; i++ {
-		res, err := encodeBlock(src[i*8 : (i+1)*8])
+		res, err := encodeBlock(src[i*fullBlockSize : i*fullBlockSize+fullBlockSize])
 		if err != nil {
 			return "", err
 		}
@@ -177,14 +190,14 @@ func DecodeFromString(src string) ([]byte, error) {
 	lastBlockSize := lenData % encodedBlockSize
 	var retVal []byte
 	for i := 0; i < fullBlockCount; i++ {
-		res, err := decodeBlock(src[i*encodedBlockSize : (i+1)*encodedBlockSize])
+		res, err := decodeBlock(src[i*encodedBlockSize : i*encodedBlockSize+encodedBlockSize])
 		if err != nil {
 			return nil, err
 		}
 		retVal = append(retVal, res...)
 	}
 	if lastBlockSize != 0 {
-		res, err := decodeBlock(src[fullBlockCount*11:])
+		res, err := decodeBlock(src[fullBlockCount*encodedBlockSize:])
 		if err != nil {
 			return nil, err
 		}
