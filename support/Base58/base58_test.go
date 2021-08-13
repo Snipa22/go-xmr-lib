@@ -57,6 +57,7 @@ func TestEncodeToString(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
+		{"No Data", args{[]byte{}}, "", false},
 		{"1 bytes of 00", args{[]byte{0x00}}, "11", false},
 		{"2 bytes of 00", args{[]byte{0x00, 0x00}}, "111", false},
 		{"3 bytes of 00", args{[]byte{0x00, 0x00, 0x00}}, "11111", false},
@@ -99,6 +100,10 @@ func Test_decodeBlock(t *testing.T) {
 		want    []byte
 		wantErr bool
 	}{
+
+		// Bad Block Sizes
+		{"Too Small", args{""}, nil, true},
+		{"Too large", args{"111111111111"}, nil, true},
 		// 1-byte block
 		{"1", args{"1"}, nil, true},
 		{"z", args{"z"}, nil, true},
