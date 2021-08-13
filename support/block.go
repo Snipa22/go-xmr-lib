@@ -12,6 +12,11 @@ import (
 // 1.1 parse_and_validate_block_from_blob -> Created a Block struct from a blob of data provided by the Get Block Template RPC call, that is then modified to suit usages
 // 1.2 get_block_hashing_blob -> Converts the blob into a block hashing blob
 
+/*
+ParseBlockFromTemplateBlob
+
+Given a block template from the daemon, this will parse it into a usable Block object for handling data properly in go structs
+*/
 func ParseBlockFromTemplateBlob(blob string) (serialization.Block, error) {
 	var b serialization.Block
 	blobInBytes, err := hex.DecodeString(blob)
@@ -145,6 +150,11 @@ func ParseBlockFromTemplateBlob(blob string) (serialization.Block, error) {
 	return b, nil
 }
 
+/*
+GetBlockHashingBlob
+
+Given a block object from the serialization library, it will convert the header of the object into a miner-hashable object
+*/
 func GetBlockHashingBlob(b serialization.Block) ([]byte, error) {
 	// Source: cryptonote_format_utils.cpp
 	// Original: get_block_hashing_blob(const block& b, blobdata& blob) - Line: 678-ish
@@ -155,8 +165,21 @@ func GetBlockHashingBlob(b serialization.Block) ([]byte, error) {
 	return sbh, nil
 }
 
-// Supporting hash systems
+/*
+GetBlockID
 
+Given a block object, hash the blob to pull the block ID for the object, may be deprecated by the implementation of a proper response from the daemon
+*/
+func GetBlockID(b serialization.Block) [32]byte {
+	return crypto.KeccakOneShot(b.GetBlob())
+}
+
+// Supporting hash systems
+/*
+getBlockMerkleTreeHash
+
+Given a block object, this converts the transaction tree into a merkle hash tree for usage in the hashing blob
+*/
 func getBlockMerkleTreeHash(b serialization.Block) [32]byte {
 	// Original: get_tx_tree_hash(const block& b) - cryptonote_format_utils.cpp:875-ish
 
