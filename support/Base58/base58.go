@@ -184,7 +184,7 @@ This function takes a string and attempts to decode it using Monero Base58 forma
 func DecodeFromString(src string) ([]byte, error) {
 	lenData := len(src)
 	if lenData == 0 {
-		return nil, nil
+		return []byte{}, nil
 	}
 	fullBlockCount := lenData / encodedBlockSize
 	lastBlockSize := lenData % encodedBlockSize
