@@ -3,7 +3,7 @@ package support
 import (
 	"bytes"
 	"errors"
-	"github.com/Snipa22/go-xmr-lib/support/base58"
+	"github.com/Snipa22/go-xmr-lib/support/Base58"
 	"golang.org/x/crypto/sha3"
 )
 
