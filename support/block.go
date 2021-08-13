@@ -3,8 +3,8 @@ package support
 import (
 	"encoding/binary"
 	"encoding/hex"
-	serialization "github.com/Snipa22/go-xmr-lib/support/Serialization"
 	"github.com/Snipa22/go-xmr-lib/support/crypto"
+	"github.com/Snipa22/go-xmr-lib/support/serialization"
 )
 
 // Things to be implemented

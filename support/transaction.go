@@ -1,8 +1,8 @@
 package support
 
 import (
-	serialization "github.com/Snipa22/go-xmr-lib/support/Serialization"
 	"github.com/Snipa22/go-xmr-lib/support/crypto"
+	"github.com/Snipa22/go-xmr-lib/support/serialization"
 )
 
 func getTransactionPrefixHash(t serialization.Transaction) [32]byte {
