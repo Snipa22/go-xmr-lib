@@ -68,7 +68,7 @@ type TransactionOutToKey struct {
 }
 
 func (totk TransactionOutToKey) Serialize() []byte {
-	var s []byte = []byte{0x03}
+	var s = []byte{0x03}
 	s = append(s, totk.PublicKey[:]...)
 	s = append(s, totk.TaggedKey[:]...)
 	return s
