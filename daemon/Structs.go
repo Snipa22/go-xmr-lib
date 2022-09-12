@@ -46,6 +46,15 @@ type BlockHeaderByHashRequest struct {
 	} `json:"params"`
 }
 
+type BlockHeaderByHeightRequest struct {
+	Jsonrpc string `json:"jsonrpc"`
+	ID      string `json:"id"`
+	Method  string `json:"method"`
+	Params  struct {
+		Height int `json:"height"`
+	} `json:"params"`
+}
+
 type GenericJSONRPCRequest struct {
 	Jsonrpc string `json:"jsonrpc"`
 	ID      string `json:"id"`
