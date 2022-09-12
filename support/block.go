@@ -105,13 +105,16 @@ func ParseBlockFromTemplateBlob(blob string) (serialization.Block, error) {
 	}
 	to.Amount = val
 
-	// Outbound type is to key, or 0x02.  Increment bytes by one
-	blobInBytes = blobInBytes[1:]
-
 	// Write a new TransactionOutToKey
 	var totk serialization.TransactionOutToKey
+	bytesCopied = copy(totk.Version[:], blobInBytes[0:1])
+	blobInBytes = blobInBytes[bytesCopied:]
 	bytesCopied = copy(totk.PublicKey[:], blobInBytes[0:32])
 	blobInBytes = blobInBytes[bytesCopied:]
+	if totk.Version[0] >= 3 {
+		bytesCopied = copy(totk.TaggedKey[:], blobInBytes[0:1])
+		blobInBytes = blobInBytes[bytesCopied:]
+	}
 	totk.Used = true
 	to.Key = totk
 

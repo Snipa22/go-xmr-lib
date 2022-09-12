@@ -62,13 +62,18 @@ type TransactionOutToScriptHash struct {
 }
 
 type TransactionOutToKey struct {
+	Version   [1]byte
 	PublicKey [32]byte
 	Used      bool
+	TaggedKey [1]byte
 }
 
 func (totk TransactionOutToKey) Serialize() []byte {
-	var s []byte = []byte{0x02}
+	var s = []byte{totk.Version[0]}
 	s = append(s, totk.PublicKey[:]...)
+	if totk.Version[0] >= 3 {
+		s = append(s, totk.TaggedKey[0])
+	}
 	return s
 }
 
