@@ -19,7 +19,7 @@ For JsonRPC, use a two-stage decoder that can decode the json RPC error wrapper,
 * getblockheaderbyheight - Unused
 * getlastblockheader - Used in blockmanager and Backend
 * submitblock - BlockRepeater and main pool (submits blocks)
-* getblocktemplate - Used in main pool loops to get the block templates
+* getblocktemplate - Used in main pool loops to get the block `templates`
 
 #TODO - Wallet
 * Docs - https://www.getmonero.org/resources/developer-guides/wallet-rpc.html
