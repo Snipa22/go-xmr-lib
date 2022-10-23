@@ -24,3 +24,22 @@ func SaveWalletState() error {
 		return nil
 	}
 }
+
+func SendXMR(inxfer XMRWalletTransfer) (XMRTransferReceipt, error) {
+	receipt := XMRTransferReceipt{}
+	if reqJson, err := json.Marshal(inxfer); err != nil {
+		return XMRTransferReceipt{}, err
+	} else {
+		resp, err := http.Post(os.Getenv("MONERO_DAEMON"), "application/json", bytes.NewReader(reqJson))
+		if err != nil {
+			return XMRTransferReceipt{}, err
+		}
+
+		decoder := json.NewDecoder(resp.Body)
+		err = decoder.Decode(&receipt)
+		if err != nil {
+			return XMRTransferReceipt{}, err
+		}
+		return receipt, nil
+	}
+}
