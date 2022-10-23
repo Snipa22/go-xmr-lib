@@ -1,18 +1,20 @@
 package wallet
 
+type xmrWalletTransferShell struct {
+	Jsonrpc string            `json:"jsonrpc"`
+	Id      string            `json:"id"`
+	Method  string            `json:"method"`
+	Params  XMRWalletTransfer `json:"params"`
+}
+
 type XMRWalletTransfer struct {
-	Jsonrpc string `json:"jsonrpc"`
-	Id      string `json:"id"`
-	Method  string `json:"method"`
-	Params  struct {
-		Destinations []struct {
-			Amount  int64  `json:"amount"`
-			Address string `json:"address"`
-		} `json:"destinations"`
-		Priority int  `json:"priority"`
-		RingSize int  `json:"ring_size"`
-		GetTxKey bool `json:"get_tx_key"`
-	} `json:"params"`
+	Destinations []struct {
+		Amount  int64  `json:"amount"`
+		Address string `json:"address"`
+	} `json:"destinations"`
+	Priority int  `json:"priority"`
+	RingSize int  `json:"ring_size"`
+	GetTxKey bool `json:"get_tx_key"`
 }
 
 type XMRTransferReceipt struct {
