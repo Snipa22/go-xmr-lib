@@ -8,13 +8,15 @@ type xmrWalletTransferShell struct {
 }
 
 type XMRWalletTransfer struct {
-	Destinations []struct {
-		Amount  int64  `json:"amount"`
-		Address string `json:"address"`
-	} `json:"destinations"`
-	Priority int  `json:"priority"`
-	RingSize int  `json:"ring_size"`
-	GetTxKey bool `json:"get_tx_key"`
+	Destinations []XMRPayment `json:"destinations"`
+	Priority     int          `json:"priority"`
+	RingSize     int          `json:"ring_size"`
+	GetTxKey     bool         `json:"get_tx_key"`
+}
+
+type XMRPayment struct {
+	Amount  int64  `json:"amount"`
+	Address string `json:"address"`
 }
 
 type XMRTransferReceipt struct {
