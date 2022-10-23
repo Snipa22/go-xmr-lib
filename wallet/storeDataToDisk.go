@@ -25,9 +25,9 @@ func SaveWalletState() error {
 	}
 }
 
-func SendXMR(inxfer XMRWalletTransfer) (XMRTransferReceipt, error) {
+func SendXMR(inXfer XMRWalletTransfer) (XMRTransferReceipt, error) {
 	receipt := XMRTransferReceipt{}
-	if reqJson, err := json.Marshal(inxfer); err != nil {
+	if reqJson, err := json.Marshal(inXfer); err != nil {
 		return XMRTransferReceipt{}, err
 	} else {
 		resp, err := http.Post(os.Getenv("MONERO_DAEMON"), "application/json", bytes.NewReader(reqJson))
