@@ -47,7 +47,7 @@ func TestSendXMR(t *testing.T) {
 			args: args{inXfer: XMRWalletTransfer{
 				Destinations: []XMRPayment{
 					{Amount: 100,
-						Address: "4A9WRKaBgwd2ZuchFodWXgL2uKYu8h1J4VPVHRiSpDaTDvWpQhVGJ4p5ZvYWF2XzniW1ZDe9p3suZgiUHnEuf6vtSb88gWk"},
+						Address: "44Ldv5GQQhP7K7t3ZBdZjkPA7Kg7dhHwk3ZM3RJqxxrecENSFx27Vq14NAMAd2HBvwEPUVVvydPRLcC69JCZDHLT2X5a4gr"},
 				},
 				Priority: 1,
 				RingSize: 16,
