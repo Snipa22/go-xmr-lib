@@ -9,6 +9,40 @@ import (
 
 var ErrInvalidChecksum = errors.New("invalid checksum for address")
 
+func IsValidTestnet(address string) (valid bool, err error) {
+	// Testnet tags - 35/3f
+	valid, err = ValidateAddress(address, []byte{0x35})
+	if valid || err != nil {
+		return
+	}
+	valid, err = ValidateAddress(address, []byte{0x3f})
+	if valid || err != nil {
+		return
+	}
+	return false, nil
+}
+
+func IsValidMainnet(address string) (valid bool, err error) {
+	// Testnet tags - 12/2a/13/11
+	valid, err = ValidateAddress(address, []byte{0x2a})
+	if valid || err != nil {
+		return
+	}
+	valid, err = ValidateAddress(address, []byte{0x12})
+	if valid || err != nil {
+		return
+	}
+	valid, err = ValidateAddress(address, []byte{0x13})
+	if valid || err != nil {
+		return
+	}
+	valid, err = ValidateAddress(address, []byte{0x11})
+	if valid || err != nil {
+		return
+	}
+	return false, nil
+}
+
 func ValidateAddress(address string, tag []byte) (bool, error) {
 	addr, err := base58.DecodeFromString(address)
 	if err != nil {
