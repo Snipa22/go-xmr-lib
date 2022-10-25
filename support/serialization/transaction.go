@@ -98,7 +98,7 @@ type TransactionPrefix struct {
 	UnlockTime      uint64
 	TransactionsIn  []TransactionIn
 	TransactionsOut []TransactionOut
-	Extra           []uint8
+	Extra           TxExtra
 }
 
 func (tp TransactionPrefix) Serialize() []byte {
@@ -118,8 +118,9 @@ func (tp TransactionPrefix) Serialize() []byte {
 	for _, e := range tp.TransactionsOut {
 		s = append(s, e.Serialize()...)
 	}
-	s = WriteUint(s, uint64(len(tp.Extra)))
-	s = append(s, tp.Extra...)
+	extraEnc := tp.Extra.Serialize()
+	s = WriteUint(s, uint64(len(extraEnc)))
+	s = append(s, extraEnc...)
 	return s
 }
 
@@ -133,4 +134,77 @@ func (t Transaction) Serialize() []byte {
 	var s []byte = t.TransactionPrefix.Serialize()
 	s = append(s, 0)
 	return s
+}
+
+type TxExtra struct {
+	Padding        *[]byte // TX_EXTRA_TAG_PADDING - 0x00
+	PubKey         []byte  // TX_EXTRA_TAG_PUBKEY - 0x01
+	Nonce          []byte  // TX_EXTRA_NONCE - 0x02
+	MergeMiningTag *[]byte // TX_EXTRA_MERGE_MINING_TAG - 0x03
+	AddlPubKeys    *[]byte // TX_EXTRA_TAG_ADDITIONAL_PUBKEYS - 0x04
+	MystMGTag      *[]byte // TX_EXTRA_MYSTERIOUS_MINERGATE_TAG - 0x0e
+}
+
+func (txe *TxExtra) Serialize() []byte {
+	var s []byte
+	if txe.Padding != nil {
+		s = WriteUint(s, 0x00)
+		s = append(s, *txe.Padding...)
+	}
+	s = WriteUint(s, 0x01)
+	s = append(s, txe.PubKey...)
+	s = WriteUint(s, 0x02)
+	s = WriteUint(s, uint64(len(txe.Nonce)))
+	s = append(s, txe.Nonce...)
+	if txe.MergeMiningTag != nil {
+		s = WriteUint(s, 0x03)
+		s = append(s, *txe.MergeMiningTag...)
+	}
+	if txe.AddlPubKeys != nil {
+		s = WriteUint(s, 0x04)
+		s = append(s, *txe.AddlPubKeys...)
+	}
+	if txe.MystMGTag != nil {
+		s = WriteUint(s, 0x0e)
+		s = append(s, *txe.MystMGTag...)
+	}
+	return s
+}
+
+func (txe *TxExtra) UpdateNonce(in []byte) error {
+	if len(in) == len(txe.Nonce) {
+		txe.Nonce = in
+	} else if len(in) > len(txe.Nonce) {
+		return ErrNonceTooLong
+	} else {
+		newNonce := in
+		for len(newNonce) < len(txe.Nonce) {
+			newNonce = append(newNonce, 0)
+		}
+		txe.Nonce = newNonce
+	}
+	return nil
+}
+
+func ConstructTXExtra(in []byte) TxExtra {
+	mutable := in
+	extra := TxExtra{}
+	for {
+		// Perform length check at the start, not the end
+		if len(mutable) == 0 {
+			return extra
+		}
+		switch mutable[0] {
+		case 0x00:
+			extra.Padding = &[]byte{0}
+			mutable = mutable[1:]
+		case 0x01:
+			extra.PubKey = append(extra.PubKey, mutable[1:33]...)
+			mutable = mutable[33:]
+		case 0x02:
+			nonceLength := int(mutable[1])
+			extra.Nonce = append(extra.Nonce, mutable[2:nonceLength+2]...)
+			mutable = mutable[nonceLength+2:]
+		}
+	}
 }

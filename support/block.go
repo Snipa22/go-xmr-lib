@@ -127,7 +127,8 @@ func ParseBlockFromTemplateBlob(blob string) (serialization.Block, error) {
 	}
 
 	// With val set to the # of bytes to read, slice and go
-	t.Extra = blobInBytes[0:val]
+	// TX Extra is now a decodable struct.  Add it
+	t.Extra = serialization.ConstructTXExtra(blobInBytes[0:val])
 	blobInBytes = blobInBytes[val:]
 
 	// RingCT Type is 0.  Advance one byte
