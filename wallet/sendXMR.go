@@ -3,6 +3,7 @@ package wallet
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 )
@@ -27,6 +28,9 @@ func SendXMR(inXfer XMRWalletTransfer) (XMRTransferReceipt, error) {
 		err = decoder.Decode(&receipt)
 		if err != nil {
 			return XMRTransferReceipt{}, err
+		}
+		if receipt.Error != nil {
+			return receipt, errors.New(receipt.Error.Message)
 		}
 		return receipt, nil
 	}

@@ -20,6 +20,10 @@ type XMRPayment struct {
 }
 
 type XMRTransferReceipt struct {
+	Error *struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
 	Id      string `json:"id"`
 	Jsonrpc string `json:"jsonrpc"`
 	Result  struct {
