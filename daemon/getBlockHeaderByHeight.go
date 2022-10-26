@@ -3,18 +3,17 @@ package daemon
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 )
 
 func GetBlockHeaderByHeight(id int) (BlockHeader, error) {
-	requestStruct := BlockHeaderByHeightRequest{
+	requestStruct := GenericParamsRequest{
 		Jsonrpc: "2.0",
 		ID:      "0",
 		Method:  "get_block_header_by_height",
-		Params: struct {
-			Height int `json:"height"`
-		}{Height: id},
+		Params:  fmt.Sprintf(`{"height": %v}`, id),
 	}
 	respHeader := BlockHeaderResponse{}
 	if reqJson, err := json.Marshal(requestStruct); err != nil {

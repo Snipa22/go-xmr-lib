@@ -3,20 +3,17 @@ package daemon
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 )
 
 func GetBlockHeaderByHash(hash string) (BlockHeader, error) {
-	requestStruct := BlockHeaderByHashRequest{
+	requestStruct := GenericParamsRequest{
 		Jsonrpc: "2.0",
 		ID:      "0",
 		Method:  "get_block_header_by_hash",
-		Params: struct {
-			Hash string `json:"hash"`
-		}{
-			Hash: hash,
-		},
+		Params:  fmt.Sprintf(`{"hash": "%v"}`, hash),
 	}
 	respHeader := BlockHeaderResponse{}
 	if reqJson, err := json.Marshal(requestStruct); err != nil {
