@@ -93,7 +93,7 @@ func (s *RXVerifier) NewSeed(input []byte) error {
 
 // Info returns the information available from the /info endpoint in the daemon
 func (s *RXVerifier) Info() (*ValidatorInfo, error) {
-	resp, err := s.httpSession.Get(fmt.Sprintf("%v/info"))
+	resp, err := s.httpSession.Get(fmt.Sprintf("%v/info", s.uri))
 	if err != nil {
 		return nil, err
 	}
