@@ -4,7 +4,7 @@
 // 	protoc        v3.21.12
 // source: main.proto
 
-package poolProtos
+package pool
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

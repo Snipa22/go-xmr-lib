@@ -1,6 +1,6 @@
 syntax = "proto2";
 package support;
-option go_package = "git.jagtech.io";
+option go_package = "github.com/Snipa22/go-xmr-lib/pool";
 enum POOLTYPE {
   PPLNS = 0;
   PPS = 1;
