@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.1...v0.2.2) (2025-05-18)
+
+
+### Bug Fixes
+
+* **transaction:** add merge mining headers ([13b674e](https://github.com/Snipa22/go-xmr-lib/commit/13b674e410cd059f0c3a5e9faad22b31ed7f074b))
+
 ## [0.2.1](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.0...v0.2.1) (2024-05-28)
 
 
