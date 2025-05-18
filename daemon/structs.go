@@ -34,6 +34,7 @@ type BlockTemplate struct {
 	Height         int
 	RawTemplate    string
 	ReservedOffset int
+	RawResponse    BlockTemplateResponse
 }
 
 type BlockHeaderResponse struct {

@@ -41,6 +41,7 @@ func GetBlockTemplate(address string, reserve int) (BlockTemplate, error) {
 		newBt.Height = daemonBTResponse.Result.Height
 		newBt.ReservedOffset = daemonBTResponse.Result.ReservedOffset
 		newBt.RawTemplate = daemonBTResponse.Result.BlocktemplateBlob
+		newBt.RawResponse = daemonBTResponse
 	}
 	return newBt, nil
 }
