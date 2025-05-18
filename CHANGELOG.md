@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.2...v0.2.3) (2025-05-18)
+
+
+### Bug Fixes
+
+* **block:** add raw monerod response ([6ac84ff](https://github.com/Snipa22/go-xmr-lib/commit/6ac84ffa3dbe7cf4c8378087a361cdd243dd1253))
+
 ## [0.2.2](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.1...v0.2.2) (2025-05-18)
 
 
