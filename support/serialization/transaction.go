@@ -140,7 +140,7 @@ type TxExtra struct {
 	Padding        *[]byte // TX_EXTRA_TAG_PADDING - 0x00
 	PubKey         []byte  // TX_EXTRA_TAG_PUBKEY - 0x01
 	Nonce          []byte  // TX_EXTRA_NONCE - 0x02
-	MergeMiningTag *[]byte // TX_EXTRA_MERGE_MINING_TAG - 0x03
+	MergeMiningTag []byte  // TX_EXTRA_MERGE_MINING_TAG - 0x03
 	AddlPubKeys    *[]byte // TX_EXTRA_TAG_ADDITIONAL_PUBKEYS - 0x04
 	MystMGTag      *[]byte // TX_EXTRA_MYSTERIOUS_MINERGATE_TAG - 0x0e
 }
@@ -151,15 +151,16 @@ func (txe *TxExtra) Serialize() []byte {
 		s = WriteUint(s, 0x00)
 		s = append(s, *txe.Padding...)
 	}
+	if len(txe.MergeMiningTag) != 0 {
+		s = WriteUint(s, 0x03)
+		s = WriteUint(s, uint64(len(txe.MergeMiningTag)))
+		s = append(s, txe.MergeMiningTag...)
+	}
 	s = WriteUint(s, 0x01)
 	s = append(s, txe.PubKey...)
 	s = WriteUint(s, 0x02)
 	s = WriteUint(s, uint64(len(txe.Nonce)))
 	s = append(s, txe.Nonce...)
-	if txe.MergeMiningTag != nil {
-		s = WriteUint(s, 0x03)
-		s = append(s, *txe.MergeMiningTag...)
-	}
 	if txe.AddlPubKeys != nil {
 		s = WriteUint(s, 0x04)
 		s = append(s, *txe.AddlPubKeys...)
@@ -188,7 +189,9 @@ func (txe *TxExtra) UpdateNonce(in []byte) error {
 
 func ConstructTXExtra(in []byte) TxExtra {
 	mutable := in
-	extra := TxExtra{}
+	extra := TxExtra{
+		MergeMiningTag: make([]byte, 0),
+	}
 	for {
 		// Perform length check at the start, not the end
 		if len(mutable) == 0 {
@@ -205,6 +208,10 @@ func ConstructTXExtra(in []byte) TxExtra {
 			nonceLength := int(mutable[1])
 			extra.Nonce = append(extra.Nonce, mutable[2:nonceLength+2]...)
 			mutable = mutable[nonceLength+2:]
+		case 0x03:
+			mergeMiningLength := int(mutable[1])
+			extra.MergeMiningTag = append(extra.MergeMiningTag, mutable[2:mergeMiningLength+2]...)
+			mutable = mutable[mergeMiningLength+2:]
 		}
 	}
 }
