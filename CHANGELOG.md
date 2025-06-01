@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.3...v0.2.4) (2025-06-01)
+
+
+### Bug Fixes
+
+* **proto:** share to int64 ([9b0e07e](https://github.com/Snipa22/go-xmr-lib/commit/9b0e07e8fb06befd350416dad2b2845bedf9bcc5))
+
 ## [0.2.3](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.2...v0.2.3) (2025-05-18)
 
 
