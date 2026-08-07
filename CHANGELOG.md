@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.4...v0.2.5) (2026-08-07)
+
+
+### Bug Fixes
+
+* **hashValidation:** RXVerifier.Hash sent malformed/wrong-endpoint requests ([618bb83](https://github.com/Snipa22/go-xmr-lib/commit/618bb83e9e104cf0876391a130a589cc3c3e167c))
+
 ## [0.2.4](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.3...v0.2.4) (2025-06-01)
 
 
