@@ -36,10 +36,18 @@ func (s *RXVerifier) Hash(input []byte, seed []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
-	req, err := http.NewRequest(fmt.Sprintf("%v/seed", s.uri), "application/x.randomx+bin", bytes.NewReader(input))
+	// Bug fix: this previously called http.NewRequest(url, method, body) --
+	// backwards (NewRequest's real signature is (method, url, body)) -- and
+	// pointed at /seed instead of /hash, meaning every real call here would
+	// either fail to build the request or silently reseed instead of
+	// hashing. Confirmed against the real randomx-service HTTP API
+	// (POST /hash, see doc/API.md): this now issues the hash request
+	// correctly.
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%v/hash", s.uri), bytes.NewReader(input))
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Content-Type", "application/x.randomx+bin")
 	req.Header.Set("RandomX-Seed", hex.EncodeToString(seed))
 	resp, err := s.httpSession.Do(req)
 	if err != nil {
