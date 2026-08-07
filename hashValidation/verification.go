@@ -4,7 +4,7 @@ type Validator interface {
 	Hash(input []byte, seed []byte) ([]byte, error)
 	NewSeed(input []byte) error
 	SetCurrentSeed(input []byte)
-	Info() (ValidatorInfo, error)
+	Info() (*ValidatorInfo, error)
 }
 
 type ValidatorInfo struct {
