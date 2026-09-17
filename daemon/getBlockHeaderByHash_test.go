@@ -1,11 +1,19 @@
 package daemon
 
 import (
+	"context"
+	"os"
 	"reflect"
 	"testing"
 )
 
+// TestGetBlockHeaderByHash is a live-integration test against a real monerod instance.
+// It is opt-in: set MONERO_DAEMON to the daemon RPC's JSON-RPC endpoint URL to run it.
 func TestGetBlockHeaderByHash(t *testing.T) {
+	if os.Getenv("MONERO_DAEMON") == "" {
+		t.Skip("MONERO_DAEMON not set; skipping live integration test")
+	}
+
 	type args struct {
 		hash string
 	}
@@ -47,7 +55,7 @@ func TestGetBlockHeaderByHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetBlockHeaderByHash(tt.args.hash)
+			got, err := GetBlockHeaderByHash(context.Background(), tt.args.hash)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlockHeaderByHash() error = %v, wantErr %v", err, tt.wantErr)
 				return
