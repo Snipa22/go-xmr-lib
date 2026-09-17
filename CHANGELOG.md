@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.5...v1.0.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **wallet:** every exported RPC-calling function in wallet/*.go and daemon/*.go now takes a context.Context as its first parameter (wallet.SendXMR, wallet.SaveWalletState, daemon.GetBlockTemplate, daemon.GetLastBlockHeader, daemon.GetBlockHeaderByHash, daemon.GetBlockHeaderByHeight). Downstream callers (e.g. go-crypto-pool) must update call sites; no compatibility shims are provided since bounding these real-money-moving/network calls correctly is the point of the fix.
+
+### Bug Fixes
+
+* **wallet:** add context/timeout, error classification, and reconciliation RPC methods ([8e84307](https://github.com/Snipa22/go-xmr-lib/commit/8e843078d91bfa7df2c1261fc49bef8e8bec9935))
+
 ## [0.2.5](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.4...v0.2.5) (2026-08-07)
 
 
