@@ -1,10 +1,18 @@
 package wallet
 
 import (
+	"context"
+	"os"
 	"testing"
 )
 
+// TestSendXMR is a live-integration test against a real monero-wallet-rpc instance. It
+// is opt-in: set MONERO_WALLET to the wallet RPC's JSON-RPC endpoint URL to run it.
 func TestSendXMR(t *testing.T) {
+	if os.Getenv("MONERO_WALLET") == "" {
+		t.Skip("MONERO_WALLET not set; skipping live integration test")
+	}
+
 	type args struct {
 		inXfer XMRWalletTransfer
 	}
@@ -59,7 +67,7 @@ func TestSendXMR(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := SendXMR(tt.args.inXfer)
+			_, err := SendXMR(context.Background(), tt.args.inXfer)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SendXMR() error = %v, wantErr %v", err, tt.wantErr)
 				return
