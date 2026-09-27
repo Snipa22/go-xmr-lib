@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/Snipa22/go-xmr-lib/compare/v1.0.0...v1.0.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **hashValidation:** give RXVerifier a pooled HTTP transport instead of net/http's 2-idle-conn default ([4dd4b7c](https://github.com/Snipa22/go-xmr-lib/commit/4dd4b7ccf654c1fc6b05520b7d772ff0400a8d62))
+
 ## [1.0.0](https://github.com/Snipa22/go-xmr-lib/compare/v0.2.5...v1.0.0) (2026-09-26)
 
 
