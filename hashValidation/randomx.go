@@ -28,6 +28,69 @@ import (
 // than lose a worker.
 const DefaultRXVerifierTimeout = 10 * time.Second
 
+// DefaultRXVerifierMaxIdleConnsPerHost is the keep-alive pool size this type's
+// HTTP transport holds open per backend.
+//
+// Why this exists at all: an RXVerifier built on a bare &http.Client{} has a
+// nil Transport, so net/http silently falls back to http.DefaultTransport,
+// whose MaxIdleConnsPerHost is 2. Every RXVerifier only ever talks to a single
+// host (one randomx-service daemon), and go-crypto-pool drives it from a
+// bounded validation worker pool sized to runtime.NumCPU() -- so with the
+// stdlib default, exactly 2 of those workers got to reuse a warm connection
+// and every other worker paid a fresh connect()/accept()/teardown on every
+// single Hash call, with the just-used connection thrown away instead of
+// returned to the pool. That is connection churn masquerading as backend
+// latency: the observed production symptom was the RandomX validation queue
+// backing up while host CPU sat nearly idle, because most of the wall clock in
+// the request path was socket setup rather than RandomX compute.
+//
+// Why 1024 specifically, rather than "a big number":
+//
+//   - The pool only ever needs one connection per concurrently in-flight
+//     request, and concurrency here is capped by the caller's RandomX worker
+//     pool. The largest real worker count deployed across the SXMR fleet today
+//     is 128 (sxmr-phx-dump's runtime.NumCPU()), so 128 is the actual number
+//     this has to cover.
+//   - 1024 is 8x that, which leaves genuine headroom for an operator who
+//     explicitly raises -randomx-workers past NumCPU (the flag allows it) and
+//     for a process that runs more than one verifier against the same daemon,
+//     without being effectively unbounded.
+//   - The cost of the ceiling being generous is only the idle sockets actually
+//     opened -- idle conns are reaped by IdleConnTimeout (90s, inherited from
+//     http.DefaultTransport) and a few KB of kernel/socket state each. On a
+//     loopback-only, high-frequency, short-request client that is nothing; an
+//     idle-conn cap set below real concurrency, as the stdlib default was, is
+//     what actually costs throughput.
+//
+// This is deliberately a finite, justified number and not an unbounded pool.
+const DefaultRXVerifierMaxIdleConnsPerHost = 1024
+
+// DefaultRXVerifierMaxIdleConns is the transport-wide idle connection ceiling.
+//
+// It is held equal to DefaultRXVerifierMaxIdleConnsPerHost on purpose: the
+// global cap applies before the per-host cap, so leaving it at
+// http.DefaultTransport's 100 would make 100 -- not 1024 -- the real limit for
+// this transport. Since a verifier's transport only ever speaks to one
+// randomx-service host, one shared value is the whole story.
+const DefaultRXVerifierMaxIdleConns = DefaultRXVerifierMaxIdleConnsPerHost
+
+// newPooledTransport returns the transport RXVerifier uses by default: a clone
+// of http.DefaultTransport (so Proxy, DialContext, ForceAttemptHTTP2,
+// IdleConnTimeout, TLSHandshakeTimeout and friends all keep their stdlib
+// behaviour) with only the idle-connection ceilings raised.
+//
+// Note what is NOT set here: MaxConnsPerHost is left at 0 (unlimited).
+// Bounding total connections per host would reintroduce exactly the failure
+// being fixed -- workers blocking in the transport waiting for a connection
+// slot. Concurrency is the caller's worker pool's job to bound; this
+// transport's job is to make sure those workers get a warm socket.
+func newPooledTransport() *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConnsPerHost = DefaultRXVerifierMaxIdleConnsPerHost
+	transport.MaxIdleConns = DefaultRXVerifierMaxIdleConns
+	return transport
+}
+
 // Compile-time proof that the thin Hash/NewSeed/Info wrappers kept the exact
 // signatures the published Validator interface requires, so this change is not
 // breaking for existing consumers, and that the new *WithContext variants
@@ -55,8 +118,10 @@ type RXVerifier struct {
 // It expects a server argument, which should be the HTTP interface including the port, but this is optional if
 // the daemon is running on the default port/localhost bindings.
 //
-// The returned verifier's HTTP client carries DefaultRXVerifierTimeout; use
-// NewRXVerifierWithTimeout to pick a different bound.
+// The returned verifier's HTTP client carries DefaultRXVerifierTimeout and a
+// connection-pooled transport (see DefaultRXVerifierMaxIdleConnsPerHost); use
+// NewRXVerifierWithTimeout to pick a different bound, or
+// NewRXVerifierWithTransport to supply your own transport.
 func NewRXVerifier(server string) *RXVerifier {
 	return NewRXVerifierWithTimeout(server, DefaultRXVerifierTimeout)
 }
@@ -65,16 +130,45 @@ func NewRXVerifier(server string) *RXVerifier {
 // the per-request timeout on the verifier's own HTTP client. A timeout of zero
 // or less falls back to DefaultRXVerifierTimeout -- an unbounded client is
 // never a valid configuration for this type.
+//
+// The returned verifier's client uses the connection-pooled transport
+// described on DefaultRXVerifierMaxIdleConnsPerHost, never the stdlib default
+// transport.
 func NewRXVerifierWithTimeout(server string, timeout time.Duration) *RXVerifier {
+	return NewRXVerifierWithTransport(server, timeout, nil)
+}
+
+// NewRXVerifierWithTransport behaves like NewRXVerifierWithTimeout but lets the
+// caller supply the http.RoundTripper the verifier's client will use, so a
+// deployment with a concurrency profile the defaults here don't suit (or one
+// that wants to wrap the transport for metrics/tracing) can tune it without
+// waiting on a go-xmr-lib release.
+//
+// A nil transport means "use the library default", which is the pooled
+// transport from newPooledTransport -- so passing nil is identical to calling
+// NewRXVerifierWithTimeout. Callers building their own *http.Transport should
+// clone http.DefaultTransport and raise MaxIdleConnsPerHost/MaxIdleConns
+// rather than starting from a zero-value transport, and must not leave those
+// at the stdlib defaults (2 and 100) for a high-concurrency validation pool.
+func NewRXVerifierWithTransport(server string, timeout time.Duration, transport http.RoundTripper) *RXVerifier {
 	if len(server) == 0 {
 		server = "http://127.0.0.1:39093"
 	}
 	if timeout <= 0 {
 		timeout = DefaultRXVerifierTimeout
 	}
+	if transport == nil {
+		transport = newPooledTransport()
+	}
 	return &RXVerifier{
-		httpSession: &http.Client{Timeout: timeout},
-		uri:         server,
+		httpSession: &http.Client{
+			Timeout: timeout,
+			// Explicit transport: a nil Transport here falls back to
+			// http.DefaultTransport and its MaxIdleConnsPerHost of 2, which
+			// throttled concurrent validation to connection-churn speed.
+			Transport: transport,
+		},
+		uri: server,
 	}
 }
 
