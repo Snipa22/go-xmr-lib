@@ -172,10 +172,41 @@ func GetBlockHashingBlob(b serialization.Block) ([]byte, error) {
 /*
 GetBlockID
 
-Given a block object, hash the blob to pull the block ID for the object, may be deprecated by the implementation of a proper response from the daemon
+Given a block object, compute the block ID (block hash) according to Monero's protocol.
+
+This function implements the ACTUAL Monero block hash calculation from cryptonote_format_utils.cpp:
+calculate_block_hash() calls get_object_hash(get_block_hashing_blob(b)).
+
+The critical detail: get_object_hash is a GENERIC TEMPLATE that re-serializes its input
+(even if already serialized) with t_serializable_object_to_blob. For blobdata/std::string
+types, this PREPENDS A VARINT LENGTH PREFIX before the raw bytes (standard Monero
+string/blob field serialization).
+
+Therefore, the block ID formula is:
+
+	block_id = Keccak256(varint(len(hashing_blob)) ++ hashing_blob)
+
+NOT Keccak256(hashing_blob) alone (which was the previous bug),
+and NOT Keccak256(full_block_blob) (which was also wrong).
+
+Returns an error if GetBlockHashingBlob fails (e.g., malformed block structure).
 */
-func GetBlockID(b serialization.Block) [32]byte {
-	return crypto.KeccakOneShot(b.GetBlob())
+func GetBlockID(b serialization.Block) ([32]byte, error) {
+	var zeroHash [32]byte
+
+	// Get the hashing blob first
+	hashingBlob, err := GetBlockHashingBlob(b)
+	if err != nil {
+		return zeroHash, err
+	}
+
+	// Prepend varint length prefix as per Monero's get_object_hash template behavior
+	var prefixedBlob []byte
+	prefixedBlob = serialization.WriteUint(prefixedBlob, uint64(len(hashingBlob)))
+	prefixedBlob = append(prefixedBlob, hashingBlob...)
+
+	// Hash the length-prefixed hashing blob
+	return crypto.KeccakOneShot(prefixedBlob), nil
 }
 
 // Supporting hash systems
