@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/Snipa22/go-xmr-lib/compare/v1.0.1...v1.0.2) (2026-09-28)
+
+
+### Bug Fixes
+
+* **support:** correct nonce endianness in block header parsing and serialization ([e65ee59](https://github.com/Snipa22/go-xmr-lib/commit/e65ee599ba637e457aebf093ed6259f437a3efb6))
+* **support:** GetBlockID must hash varint-length-prefixed hashing blob per get_object_hash template ([c1130c7](https://github.com/Snipa22/go-xmr-lib/commit/c1130c738de7a1409e4af1e0a45e2871b30bc076))
+
 ## [1.0.1](https://github.com/Snipa22/go-xmr-lib/compare/v1.0.0...v1.0.1) (2026-09-27)
 
 
