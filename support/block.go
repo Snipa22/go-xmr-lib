@@ -48,8 +48,8 @@ func ParseBlockFromTemplateBlob(blob string) (serialization.Block, error) {
 	bytesCopied := copy(b.PreviousID[:], blobInBytes[0:32])
 	blobInBytes = blobInBytes[bytesCopied:]
 
-	// Get the nonce, uint32, stored as 4 bytes in little-endian (native) order per Monero spec
-	b.Nonce = binary.LittleEndian.Uint32(blobInBytes[0:4])
+	// Get the nonce, uint32, but is stored as a block of 4 bytes...  Jackassery.
+	b.Nonce = binary.BigEndian.Uint32(blobInBytes[0:4])
 	blobInBytes = blobInBytes[4:]
 
 	// Start Transaction Processing (Miner Transaction)

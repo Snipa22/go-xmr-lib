@@ -24,8 +24,8 @@ func (bh BlockHeader) Serialize() []byte {
 	copy(tempBlob[:], bh.PreviousID[:])
 	s = append(s, tempBlob...)
 
-	// Nonce (4 bytes, little-endian as per Monero spec)
-	binary.LittleEndian.PutUint32(tempBlob, bh.Nonce)
+	// Nonce
+	binary.BigEndian.PutUint32(tempBlob, bh.Nonce)
 	s = append(s, tempBlob[0:4]...)
 
 	return s
