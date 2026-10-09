@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/Snipa22/go-xmr-lib/compare/v1.0.2...v1.0.3) (2026-10-09)
+
+
+### Bug Fixes
+
+* **support:** return an error instead of looping/panicking on malformed tx_extra ([d8d6d3c](https://github.com/Snipa22/go-xmr-lib/commit/d8d6d3c62b87db53be409f235d8901602995bc38))
+
 ## [1.0.2](https://github.com/Snipa22/go-xmr-lib/compare/v1.0.1...v1.0.2) (2026-09-28)
 
 
