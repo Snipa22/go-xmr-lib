@@ -187,7 +187,7 @@ func (txe *TxExtra) UpdateNonce(in []byte) error {
 	return nil
 }
 
-func ConstructTXExtra(in []byte) TxExtra {
+func ConstructTXExtra(in []byte) (TxExtra, error) {
 	mutable := in
 	extra := TxExtra{
 		MergeMiningTag: make([]byte, 0),
@@ -195,23 +195,40 @@ func ConstructTXExtra(in []byte) TxExtra {
 	for {
 		// Perform length check at the start, not the end
 		if len(mutable) == 0 {
-			return extra
+			return extra, nil
 		}
 		switch mutable[0] {
 		case 0x00:
 			extra.Padding = &[]byte{0}
 			mutable = mutable[1:]
 		case 0x01:
+			if len(mutable) < 33 {
+				return extra, ErrTxExtraTruncated
+			}
 			extra.PubKey = append(extra.PubKey, mutable[1:33]...)
 			mutable = mutable[33:]
 		case 0x02:
+			if len(mutable) < 2 {
+				return extra, ErrTxExtraTruncated
+			}
 			nonceLength := int(mutable[1])
+			if len(mutable) < nonceLength+2 {
+				return extra, ErrTxExtraTruncated
+			}
 			extra.Nonce = append(extra.Nonce, mutable[2:nonceLength+2]...)
 			mutable = mutable[nonceLength+2:]
 		case 0x03:
+			if len(mutable) < 2 {
+				return extra, ErrTxExtraTruncated
+			}
 			mergeMiningLength := int(mutable[1])
+			if len(mutable) < mergeMiningLength+2 {
+				return extra, ErrTxExtraTruncated
+			}
 			extra.MergeMiningTag = append(extra.MergeMiningTag, mutable[2:mergeMiningLength+2]...)
 			mutable = mutable[mergeMiningLength+2:]
+		default:
+			return extra, ErrUnhandledTxExtraTag
 		}
 	}
 }
