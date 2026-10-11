@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/Snipa22/go-xmr-lib/compare/v1.0.3...v1.0.4) (2026-10-11)
+
+
+### Bug Fixes
+
+* **hashValidation:** force-reseed randomx-service on 403/notInitialized ([ca12cac](https://github.com/Snipa22/go-xmr-lib/commit/ca12cac53f2f5b1a9fe22cd5f131f004d978cde3))
+
 ## [1.0.3](https://github.com/Snipa22/go-xmr-lib/compare/v1.0.2...v1.0.3) (2026-10-09)
 
 
