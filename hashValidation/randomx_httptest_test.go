@@ -478,6 +478,94 @@ func TestResponseBodyClosedOnEveryPath(t *testing.T) {
 	}
 }
 
+// newUninitializedDaemon returns a server that behaves exactly like a FRESH
+// randomx-service process that has never received a successful POST /seed
+// since ITS OWN startup: every /hash call 403s (notInitialized) until /seed
+// is POSTed, at which point it flips to answering /hash normally. This
+// mirrors randomx-service's real src/service.cpp gating
+// (`!data_->initialized_` -> 403 on /hash and /batch).
+func newUninitializedDaemon(t *testing.T) (*httptest.Server, *int64) {
+	t.Helper()
+	var initialized int64
+	var seedPosts int64
+	mux := http.NewServeMux()
+	mux.HandleFunc("/hash", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		if atomic.LoadInt64(&initialized) == 0 {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(stubHashHex))
+	})
+	mux.HandleFunc("/seed", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		atomic.AddInt64(&seedPosts, 1)
+		atomic.StoreInt64(&initialized, 1)
+		w.WriteHeader(http.StatusNoContent)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv, &seedPosts
+}
+
+// TestHashSelfHealsAfterRandomxServiceRestart is THE regression test for the
+// 2026-10-11 production incident: randomx-service restarts independently of
+// leaf-direct/leaf-solo (a separate process on the same host) and comes back
+// up uninitialized, while this verifier's own currentSeed cache still
+// (incorrectly, from the daemon's point of view) believes the seed is
+// already known-good from before the restart -- i.e. NO seed CHANGE is ever
+// detected, which is exactly the scenario that left a real leaf permanently
+// answering 403 for 20+ minutes with zero shares accepted until an operator
+// also restarted leaf-direct itself.
+//
+// Before the fix: HashWithContext only reseeds when seedMatches(seed) is
+// false. Here it is deliberately pre-seeded to already equal the seed being
+// hashed against (SetCurrentSeed below, mirroring a verifier that has been
+// running since before the daemon restart), so the old code took the
+// "seed already matches, skip reseed" path straight into a 403 and returned
+// notInitialized as an error -- a real validation failure for every genuine
+// share, forever, with no self-recovery.
+//
+// After the fix: a 403 from /hash is treated as "the remote daemon lost its
+// seed state" and triggers an unconditional (cache-bypassing) reseed plus one
+// retry, which succeeds without ever needing a seed VALUE change.
+func TestHashSelfHealsAfterRandomxServiceRestart(t *testing.T) {
+	srv, seedPosts := newUninitializedDaemon(t)
+	v := NewRXVerifier(srv.URL)
+
+	seed := []byte("unchanged-seed-across-the-restart")
+	// Simulate a verifier that already believed this exact seed was
+	// current BEFORE randomx-service restarted -- no seed change will ever
+	// be observed by this verifier's own bookkeeping.
+	v.SetCurrentSeed(seed)
+
+	if got := atomic.LoadInt64(seedPosts); got != 0 {
+		t.Fatalf("seedPosts = %d before any Hash call, want 0", got)
+	}
+
+	hash, err := v.Hash([]byte("real miner share input"), seed)
+	if err != nil {
+		t.Fatalf("Hash against a freshly-restarted (uninitialized) randomx-service, with an unchanged cached seed, returned error = %v; want it to self-heal by force-reseeding and succeed", err)
+	}
+	if hex.EncodeToString(hash) != stubHashHex {
+		t.Fatalf("Hash = %x, want %v", hash, stubHashHex)
+	}
+	if got := atomic.LoadInt64(seedPosts); got != 1 {
+		t.Fatalf("seedPosts = %d after the self-healing Hash call, want exactly 1 (the forced reseed)", got)
+	}
+
+	// Steady state afterward: the daemon is now initialized and the cache
+	// is correct, so a second identical call must NOT trigger another
+	// needless /seed POST.
+	if _, err := v.Hash([]byte("another real miner share input"), seed); err != nil {
+		t.Fatalf("Hash after self-healing returned error = %v", err)
+	}
+	if got := atomic.LoadInt64(seedPosts); got != 1 {
+		t.Fatalf("seedPosts = %d after a second steady-state Hash call, want still 1 (no redundant reseed)", got)
+	}
+}
+
 // TestConcurrentHashSeedAccessIsRaceFree is the Bug 3 regression test: many
 // goroutines hammering one shared RXVerifier with a MIX of the already-current
 // seed and brand new seeds. Run under `go test -race`, this fails (race

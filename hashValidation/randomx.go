@@ -197,6 +197,46 @@ func (s *RXVerifier) HashWithContext(ctx context.Context, input []byte, seed []b
 			return nil, err
 		}
 	}
+	hash, statusErr := s.doHash(ctx, input, seed)
+
+	// PRODUCTION INCIDENT (2026-10-11, jagtech sxmr/Tari leaf fleet): the
+	// check above only catches a seed CHANGE from this verifier's own
+	// point of view. If randomx-service itself restarts independently of
+	// this process (the common operational pattern -- randomx-service is a
+	// separate daemon from leaf-direct/leaf-solo), the daemon comes back up
+	// with data_->initialized_ == false and answers every /hash with 403
+	// (notInitialized) until it receives its OWN first POST /seed since
+	// ITS restart -- but this verifier's currentSeed cache still (correctly,
+	// from its own perspective) remembers the seed as already pushed, so
+	// seedMatches(seed) above returns true and the reseed is skipped. There
+	// is no "connection established"/"reconnect" event to hook for an HTTP
+	// client against a daemon that can restart silently underneath it, so a
+	// 403 from /hash IS the only real, unambiguous signal that the remote
+	// side lost its seed state. Treat it as exactly that: force an
+	// unconditional reseed (bypassing the cache comparison, since the cache
+	// is precisely what's stale here) and retry the hash exactly once. This
+	// self-heals a randomx-service restart without requiring leaf-direct
+	// itself to also restart or the on-chain seed to coincidentally change
+	// -- confirmed production bug: restarting ONLY randomx-service left a
+	// leaf permanently returning 403 with zero shares accepted for 20+
+	// minutes until an operator also restarted leaf-direct.
+	if errors.Is(statusErr, notInitialized) {
+		if err := s.forceReseedWithContext(ctx, seed); err != nil {
+			return nil, err
+		}
+		return s.doHash(ctx, input, seed)
+	}
+	return hash, statusErr
+}
+
+// doHash issues the actual POST /hash request and decodes the response. It
+// assumes the caller has already ensured (or deliberately skipped ensuring)
+// that the daemon has the right seed loaded.
+//
+// Split out of HashWithContext so the 403/notInitialized retry path above can
+// issue the real HTTP round trip twice (once before, once after a forced
+// reseed) without duplicating the request-building/response-decoding logic.
+func (s *RXVerifier) doHash(ctx context.Context, input []byte, seed []byte) ([]byte, error) {
 	// Bug fix: this previously called http.NewRequest(url, method, body) --
 	// backwards (NewRequest's real signature is (method, url, body)) -- and
 	// pointed at /seed instead of /hash, meaning every real call here would
@@ -247,10 +287,42 @@ func (s *RXVerifier) NewSeed(input []byte) error {
 
 // NewSeedWithContext sets the seed value into the remote daemon and updates the
 // local seed directly, aborting the request as soon as ctx is done.
+//
+// This is a no-op (returns nil without touching the wire) when input already
+// equals this verifier's cached currentSeed. That cache-short-circuit is
+// exactly the steady-state optimization this type exists for (don't re-POST
+// the same seed on every job fetch) -- but it is also exactly what goes wrong
+// if the REMOTE daemon's own seed state was reset independently (see
+// forceReseedWithContext / the 403 retry in HashWithContext for the path that
+// handles that case instead).
 func (s *RXVerifier) NewSeedWithContext(ctx context.Context, input []byte) error {
 	if s.seedMatches(input) {
 		return nil
 	}
+	return s.postSeedWithContext(ctx, input)
+}
+
+// forceReseedWithContext POSTs input to /seed UNCONDITIONALLY, bypassing the
+// seedMatches cache check that NewSeedWithContext applies.
+//
+// This exists specifically for the HashWithContext 403/notInitialized retry
+// path: in that situation this verifier's cache says the seed already
+// matches (that's precisely why the normal, cache-checked reseed in
+// HashWithContext was skipped), so a cache-respecting reseed would be a
+// no-op and could never actually fix anything. Also used as the one
+// unconditional push a caller may want to issue right after constructing a
+// verifier or re-establishing contact with randomx-service, before the
+// steady-state change-detection path in NewSeedWithContext/HashWithContext
+// takes over.
+func (s *RXVerifier) forceReseedWithContext(ctx context.Context, input []byte) error {
+	return s.postSeedWithContext(ctx, input)
+}
+
+// postSeedWithContext issues the actual POST /seed request and, on success,
+// updates currentSeed. Shared by NewSeedWithContext (cache-checked) and
+// forceReseedWithContext (unconditional) so the real HTTP/response-decoding
+// logic lives in exactly one place.
+func (s *RXVerifier) postSeedWithContext(ctx context.Context, input []byte) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%v/seed", s.uri), bytes.NewReader(input))
 	if err != nil {
 		return err
